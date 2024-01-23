@@ -1,24 +1,36 @@
 #!/usr/bin/env/ node
 
 import sdk from "microsoft-cognitiveservices-speech-sdk"
-import { readFile } from "fs/promises"
+import { readFile, mkdir } from "fs/promises"
+import dotenv from "dotenv"
 
-if (process.env.SPEECH_KEY == undefined || process.env.SPEECH_REGION == undefined) process.exit(1)
-const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.SPEECH_KEY, process.env.SPEECH_REGION)
+dotenv.config()
+
+if (process.env.AZURE_KEY == undefined || process.env.AZURE_REGION == undefined) process.exit(1)
+const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.AZURE_KEY, process.env.AZURE_REGION)
 speechConfig.speechSynthesisVoiceName = "ja-JP-NanamiNeural"
 
-const stringList = await readFile("input.json") 
+await mkdir("./out", { recursive: true })
+
+const stringList = await readFile("input.txt") 
 const list = stringList.toString().split("\n")
 
-let i = 0
+let i = 1
 
-for (const item of list) {
+for (let item of list) {
+
+  console.log("Converting " + i + ": \"" + item + "\"")
 
   const outputFile = "./out/" + i + ".mp3"
   const audioConfig = sdk.AudioConfig.fromAudioFileOutput(outputFile)
 
-  const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig)
-  synthesizer.speakTextAsync()
-  
+  let synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig)
+
+  await new Promise<void>((res) => synthesizer.speakTextAsync(item, () => res()))
+  synthesizer.close()
+
+  i++;
 
 }
+
+console.log("Done!")
