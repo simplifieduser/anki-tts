@@ -1,12 +1,12 @@
 #!/usr/bin/env/ node
 
 import sdk from "microsoft-cognitiveservices-speech-sdk"
-import { readFile, mkdir } from "fs/promises"
+import { readFile, mkdir, writeFile } from "fs/promises"
 import dotenv from "dotenv"
 
 dotenv.config()
 
-if (process.env.AZURE_KEY == undefined || process.env.AZURE_REGION == undefined) process.exit(1)
+if (process.env.AZURE_KEY == undefined || process.env.AZURE_REGION == undefined || process.env.AZURE_VOICE == undefined) process.exit(1)
 const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.AZURE_KEY, process.env.AZURE_REGION)
 speechConfig.speechSynthesisVoiceName = "ja-JP-NanamiNeural"
 
@@ -15,22 +15,67 @@ await mkdir("./out", { recursive: true })
 const stringList = await readFile("input.txt") 
 const list = stringList.toString().split("\n")
 
+const prefix = process.env.FILE_PREFIX || ""
+
+let numberOfDigits = (Math.log10((list.length ^ (list.length >> 31)) - (list.length >> 31)) | 0) + 1
+let fileNames: string[] = []
 let i = 1
 
 for (let item of list) {
 
+  item = item.slice(0, item.indexOf("\t"))
+  item.trim()
+  if (item == "" || item.startsWith("#")) continue
+
   console.log("Converting " + i + ": \"" + item + "\"")
 
-  const outputFile = "./out/" + i + ".mp3"
+  const fileName = prefix + i.toLocaleString("de-DE", {
+    minimumIntegerDigits: numberOfDigits,
+    useGrouping: false
+  })
+  const outputFile = "./out/" + fileName + ".mp3"
   const audioConfig = sdk.AudioConfig.fromAudioFileOutput(outputFile)
+
+  fileNames.push(fileName + ".mp3")
 
   let synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig)
 
-  await new Promise<void>((res) => synthesizer.speakTextAsync(item, () => res()))
+  await new Promise<void>((res) => synthesizer.speakTextAsync(item, (result) => {
+    if (result.errorDetails != undefined) console.log(result.errorDetails)
+    res()
+  }))
   synthesizer.close()
+
+  await new Promise<void>((res) => setTimeout(res, 500))
 
   i++;
 
 }
+
+
+let outputString = ""
+let j = 0;
+
+for (let item of list) {
+
+  if (item.trimEnd() == "" || item.startsWith("#")) {
+
+    outputString += item.trimEnd() + "\n"
+
+  }
+  else {
+
+    item = item.trimEnd()
+    item = item.slice(0, item.indexOf("[sound:"))
+    item = item.trimEnd()
+
+    outputString += item + "\t[sound:" + fileNames[j] + "]\n"
+    j++;
+
+  }
+
+}
+
+await writeFile("output.txt", outputString)
 
 console.log("Done!")
