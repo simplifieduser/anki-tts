@@ -1,4 +1,5 @@
 node_modules
 out/
 input.txt
+output.txt
 .env
