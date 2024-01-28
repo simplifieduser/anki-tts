@@ -5,10 +5,10 @@ import { readFile, mkdir, writeFile } from "fs/promises"
 import dotenv from "dotenv"
 
 dotenv.config()
+if (process.env.AZURE_KEY == undefined || process.env.AZURE_REGION == undefined) process.exit(1)
 
-if (process.env.AZURE_KEY == undefined || process.env.AZURE_REGION == undefined || process.env.AZURE_VOICE == undefined) process.exit(1)
 const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.AZURE_KEY, process.env.AZURE_REGION)
-speechConfig.speechSynthesisVoiceName = "ja-JP-NanamiNeural"
+speechConfig.speechSynthesisVoiceName = process.env.AZURE_VOICE || "en-US-AriaNeural"
 
 await mkdir("./out", { recursive: true })
 
@@ -17,15 +17,21 @@ const list = stringList.toString().split("\n")
 
 const prefix = process.env.FILE_PREFIX || ""
 
+const fieldIndexString = process.env.FIELD_INDEX || "0"
+let fieldIndex = parseInt(fieldIndexString)
+if (isNaN(fieldIndex) || fieldIndex < 0) fieldIndex = 0
+
 let numberOfDigits = (Math.log10((list.length ^ (list.length >> 31)) - (list.length >> 31)) | 0) + 1
 let fileNames: string[] = []
 let i = 1
 
-for (let item of list) {
+for (let line of list) {
 
-  item = item.slice(0, item.indexOf("\t"))
-  item.trim()
-  if (item == "" || item.startsWith("#")) continue
+  line.trim()
+  if (line == "" || line.startsWith("#")) continue
+  const items = line.split("\t")
+
+  const item = items[fieldIndex]
 
   console.log("Converting " + i + ": \"" + item + "\"")
 
