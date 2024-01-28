@@ -9,6 +9,7 @@ if (process.env.AZURE_KEY == undefined || process.env.AZURE_REGION == undefined)
 
 const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.AZURE_KEY, process.env.AZURE_REGION)
 speechConfig.speechSynthesisVoiceName = process.env.AZURE_VOICE || "en-US-AriaNeural"
+speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio48Khz192KBitRateMonoMp3
 
 await mkdir("./out", { recursive: true })
 
