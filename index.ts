@@ -65,7 +65,10 @@ let j = 0;
 
 for (let item of list) {
 
-  if (item.trimEnd() == "" || item.startsWith("#")) {
+  if (item.trimEnd() == "") {
+    continue
+  }
+  else if (item.startsWith("#")) {
 
     outputString += item.trimEnd() + "\n"
 
@@ -73,7 +76,8 @@ for (let item of list) {
   else {
 
     item = item.trimEnd()
-    item = item.slice(0, item.indexOf("[sound:"))
+    if (item.indexOf("[sound:") > 0)
+      item = item.slice(0, item.indexOf("[sound:"))
     item = item.trimEnd()
 
     outputString += item + "\t[sound:" + fileNames[j] + "]\n"
